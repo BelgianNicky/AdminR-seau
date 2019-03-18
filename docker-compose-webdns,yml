@@ -1,0 +1,66 @@
+version : '2'
+
+services :
+  soa:
+    image: A_CHANGER/wt_soa:latest
+    container_name: soa
+    restart: always
+    networks:
+      server:
+        ipv4_address: 172.18.0.22
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+    volumes:
+      - ./dns/named.conf:/etc/bind/named.conf
+      - ./dns/named.conf.options:/etc/bind/named.conf.options
+      - ./dns/named.conf.default-zones:/etc/bind/named.conf.default-zones
+      - ./dns/named.conf.local:/etc/bind/named.conf.local
+      - ./dns/db.wt1.ephec-ti.be:/etc/bind/db.wt1.ephec-ti.be
+      - ./dns/db.internal.wt1.ephec-ti.be:/etc/bind/db.internal.wt1.ephec-ti.be
+
+  web:
+    image: A_CHANGER/wt_web:latest
+    container_name: web
+    restart: always
+    networks:
+      webDb:
+        ipv4_address: 172.18.0.132
+      server:
+        ipv4_address: 172.18.0.23
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      -  /home/dev/www:/var/www
+    links:
+      - db
+
+  db:
+    image: A_CHANGER/wt_db:latest
+    container_name: db
+    restart: always
+    networks:
+      webDb:
+        ipv4_address: 172.18.0.131
+    volumes:
+      - data-volume:/var/lib/db
+      - ./db/mysqld.cnf:/etc/mysql/mysql.conf.d/mysqld.cnf
+
+volumes:
+  data-volume:
+
+networks:
+  server:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.18.0.0/25
+
+  webDb:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.18.0.128/29
